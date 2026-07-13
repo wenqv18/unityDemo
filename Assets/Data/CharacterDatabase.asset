@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:yousandi.cn,2023:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4595d558e1b2e4f46bd88af0d3971fdf, type: 3}
+  m_Name: CharacterDatabase
+  m_EditorClassIdentifier: 
+  characters:
+  - {fileID: 11400000, guid: 6f97179046779a54bbb4a98788d29e56, type: 2}
+  - {fileID: 11400000, guid: 66b427b3212624e4ca8624a34481b830, type: 2}
+  - {fileID: 11400000, guid: 2658476632dd07e4ca94d888a708ef79, type: 2}
+  - {fileID: 11400000, guid: ca2ae92638be11c4ea622ade48a0c95b, type: 2}
+  - {fileID: 11400000, guid: de60594a466255947866b13dff57531b, type: 2}
