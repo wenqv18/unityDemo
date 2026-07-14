@@ -339,6 +339,7 @@ MonoBehaviour:
   attackSpeed: 5
   moveSpeed: 16
   defense: 0
+  instanceMultiplier: 1
 --- !u!114 &5728775984928177993
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -369,6 +370,8 @@ MonoBehaviour:
   attackSpeedIntervalScale: 10
   minimumAttackInterval: 0.1
   rangeTolerance: 0.35
+  hitSoundResourcePath: Sounds/Sound_AttackSword
+  hitSoundVolume: 1
 --- !u!114 &7239773162891660840
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -389,6 +392,8 @@ MonoBehaviour:
   disableCollidersOnDeath: 1
   disableBehavioursOnDeath: 1
   modelChildName: Model
+  deathSoundResourcePath: Sounds/Sound_Death
+  deathSoundVolume: 1
   fallbackDeathVisualDuration: 3.9
   onDeath:
     m_PersistentCalls:

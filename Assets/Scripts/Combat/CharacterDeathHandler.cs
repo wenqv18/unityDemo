@@ -16,6 +16,8 @@ public sealed class CharacterDeathHandler : MonoBehaviour
     [SerializeField] private bool disableCollidersOnDeath = true;
     [SerializeField] private bool disableBehavioursOnDeath = true;
     [SerializeField] private string modelChildName = "Model";
+    [SerializeField] private string deathSoundResourcePath;
+    [SerializeField, Range(0f, 1f)] private float deathSoundVolume = 1f;
     [SerializeField] private float fallbackDeathVisualDuration = 3.9f;
     [SerializeField] private UnityEvent onDeath;
 
@@ -60,6 +62,7 @@ public sealed class CharacterDeathHandler : MonoBehaviour
 
         handledDeath = true;
         onDeath?.Invoke();
+        GameSoundPlayer.PlayAt(deathSoundResourcePath, transform.position, deathSoundVolume);
 
         Transform model = FindModel();
         if (detachDeathVisual)

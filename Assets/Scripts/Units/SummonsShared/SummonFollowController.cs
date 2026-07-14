@@ -245,10 +245,9 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
 
         Vector3 currentPosition = transform.position;
         Vector3 target = new Vector3(targetPosition.x, currentPosition.y, targetPosition.z);
+        FaceFlatDirection(target - currentPosition);
         Vector3 nextPosition = Vector3.MoveTowards(currentPosition, target, speed * Time.deltaTime);
-        Vector3 movement = nextPosition - currentPosition;
         transform.position = nextPosition;
-        FaceFlatDirection(movement);
     }
 
     private void FaceFlatDirection(Vector3 direction)

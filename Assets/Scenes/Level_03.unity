@@ -3207,6 +3207,9 @@ GameObject:
   - component: {fileID: 572840403}
   - component: {fileID: 572840402}
   - component: {fileID: 572840401}
+  - component: {fileID: 572840413}
+  - component: {fileID: 572840412}
+  - component: {fileID: 572840414}
   m_Layer: 0
   m_HasEditorInfo: 1
   m_Name: Player
@@ -3330,6 +3333,7 @@ MonoBehaviour:
   attackSpeed: 0
   moveSpeed: 10
   defense: 0
+  instanceMultiplier: 1
 --- !u!114 &572840407
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3363,11 +3367,13 @@ MonoBehaviour:
   followTarget: {fileID: 572840400}
   spawnMinDistance: 3
   spawnMaxDistance: 8
+  berserkerSpawnYOffset: 1
   maxSummons: 5
   summonEnergyData: {fileID: 11400000, guid: b3143d85e2709304e9a31062e4475212, type: 2}
   rangedSummonEnergyData: {fileID: 11400000, guid: 7be3bd5ea1eb0bf488d337ffcce95e09, type: 2}
   firemageSummonEnergyData: {fileID: 11400000, guid: 840875f0ea19e1d488581dd517553c90, type: 2}
   berserkerSummonEnergyData: {fileID: 11400000, guid: 19c066f2aef7bd147b5709309449ab5f, type: 2}
+  drawingSummonCooldown: 3
   summonVfxPrefab: {fileID: 0}
   summonVfxAnchorName: Bottom
   summonVfxFallbackLifetime: 3
@@ -3440,6 +3446,63 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &572840412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572840399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eea78118e361308439ce25fbdd7877b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rb: {fileID: 0}
+  movingSpeedThreshold: 0.05
+--- !u!114 &572840413
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572840399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b5e4ec2c7a5032343a6eab95b634512f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  animator: {fileID: 0}
+  stats: {fileID: 0}
+  actionController: {fileID: 0}
+  walkStateName: Walk
+  runStateName: Run
+  standStateName: Summon_0Stand
+  attackStateName: Attack
+  hitStateName: Hit
+  deathStateName: Death
+  movementThreshold: 0.05
+  crossFadeDuration: 0.08
+  fallbackActionLockDuration: 0.35
+  attackLockDuration: 1.667
+  hitLockDuration: 0.7
+  deathDuration: 3.9
+--- !u!114 &572840414
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 572840399}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30c724bf75f26e24481c80a3567f3a9a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  modelRoot: {fileID: 1989593804}
+  rb: {fileID: 572840410}
+  turnSpeedDegreesPerSecond: 720
+  movementThreshold: 0.05
 --- !u!1 &575753616
 GameObject:
   m_ObjectHideFlags: 0
@@ -12763,7 +12826,7 @@ Animator:
   m_GameObject: {fileID: 1989593803}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: f0ffaaedd31fba54e8f9fb7dd20d907d, type: 2}
   m_CullingMode: 1
   m_UpdateMode: 0
   m_UpdateFrequencyMode: 0

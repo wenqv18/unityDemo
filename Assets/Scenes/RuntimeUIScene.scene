@@ -6635,6 +6635,7 @@ GameObject:
   - component: {fileID: 1756087726}
   - component: {fileID: 1756087729}
   - component: {fileID: 1756087730}
+  - component: {fileID: 1756087731}
   m_Layer: 5
   m_HasEditorInfo: 1
   m_Name: 'PaintingRange '
@@ -6682,6 +6683,7 @@ MonoBehaviour:
   usageTmpText: {fileID: 0}
   templateRecognizer: {fileID: 1756087729}
   datasetExporter: {fileID: 1756087730}
+  onnxPredictor: {fileID: 1756087731}
   httpPredictor: {fileID: 87657989}
 --- !u!114 &1756087727
 MonoBehaviour:
@@ -6767,6 +6769,39 @@ MonoBehaviour:
   targetLabel: 
   filePrefix: drawing
   logSavedPath: 1
+--- !u!114 &1756087731
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1756087724}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 051ccc645e395614ba528b2d0ab38ee4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  modelAsset: {fileID: 5022602860645237092, guid: b3a9ae3e20c51d8488227df646e21648, type: 3}
+  classNamesJson: {fileID: 4900000, guid: f125bde4638c6fd48bc2091aaf1523dc, type: 3}
+  backendType: 512
+  inputSize: 64
+  cropThreshold: 240
+  cropMargin: 4
+  normalizedMaxSize: 0.85
+  minimumConfidence: 0.6
+  logResult: 1
+  logScores: 1
+  savePreprocessedInput: 0
+  debugFolderName: DrawingOnnxDebug
+  onCircle:
+    m_PersistentCalls:
+      m_Calls: []
+  onTriangle:
+    m_PersistentCalls:
+      m_Calls: []
+  onUnknown:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1001 &1789550901
 PrefabInstance:
   m_ObjectHideFlags: 0

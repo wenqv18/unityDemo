@@ -8,6 +8,8 @@ public sealed class ProjectileImpactEffect : MonoBehaviour
 {
     [SerializeField] private GameObject impactEffectObject;
     [SerializeField] private string impactEffectObjectName = "Explosion_Rubble";
+    [SerializeField] private string impactSoundResourcePath;
+    [SerializeField, Range(0f, 1f)] private float impactSoundVolume = 1f;
     [SerializeField] private float fallbackLifetime = 3f;
 
     private void Awake()
@@ -30,6 +32,7 @@ public sealed class ProjectileImpactEffect : MonoBehaviour
         Transform effectTransform = impactEffectObject.transform;
         effectTransform.SetParent(null, true);
         impactEffectObject.SetActive(true);
+        GameSoundPlayer.PlayAt(impactSoundResourcePath, effectTransform.position, impactSoundVolume);
 
         ParticleSystem[] particleSystems = impactEffectObject.GetComponentsInChildren<ParticleSystem>(true);
         float lifetime = fallbackLifetime;

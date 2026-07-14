@@ -142,7 +142,8 @@ PrefabInstance:
       propertyPath: m_Name
       value: FireArrow
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 5303414499372098446, guid: f9c4c6037fb6bdb45b65a9ecc3a0cd5c, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 590346343154866530, guid: f9c4c6037fb6bdb45b65a9ecc3a0cd5c, type: 3}
@@ -188,6 +189,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   impactEffectObject: {fileID: 0}
   impactEffectObjectName: Explosion_Rubble
+  impactSoundResourcePath: Sounds/Sound_FireballExplosion
+  impactSoundVolume: 1
   fallbackLifetime: 3
 --- !u!114 &1508254553596757925
 MonoBehaviour:

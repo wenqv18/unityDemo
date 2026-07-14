@@ -17,6 +17,7 @@ public sealed class CharacterRuntimeStats : MonoBehaviour
     [SerializeField] private float attackSpeed;
     [SerializeField] private float moveSpeed;
     [SerializeField] private int defense;
+    [SerializeField, Min(0.01f)] private float instanceMultiplier = 1f;
 
     private bool deathNotified;
 
@@ -29,6 +30,7 @@ public sealed class CharacterRuntimeStats : MonoBehaviour
     public float MoveSpeedStat => moveSpeed;
     public int Defense => defense;
     public bool IsDead => currentHealth <= 0;
+    public float InstanceMultiplier => instanceMultiplier;
 
     public event Action<CharacterRuntimeStats> HealthChanged;
     public event Action<CharacterRuntimeStats> Died;
@@ -60,10 +62,11 @@ public void ApplyData(bool resetCurrentHealth = true)
             return;
         }
 
-        maxHealth = characterData.MaxHealth;
-        attackDamage = characterData.AttackDamage;
-        attackSpeed = characterData.AttackSpeed;
-        moveSpeed = characterData.MoveSpeed;
+        float safeMultiplier = Mathf.Max(0.01f, instanceMultiplier);
+        maxHealth = Mathf.Max(1, Mathf.RoundToInt(characterData.MaxHealth * safeMultiplier));
+        attackDamage = Mathf.Max(1, Mathf.RoundToInt(characterData.AttackDamage * safeMultiplier));
+        attackSpeed = Mathf.Max(0f, characterData.AttackSpeed / safeMultiplier);
+        moveSpeed = Mathf.Max(0f, characterData.MoveSpeed * safeMultiplier);
         defense = characterData.Defense;
 
         currentHealth = resetCurrentHealth ? maxHealth : Mathf.Clamp(currentHealth, 0, maxHealth);
@@ -124,12 +127,18 @@ public void ResetHealth()
     /// </summary>
 public void ApplyInstanceMultiplier(float multiplier)
     {
-        float safeMultiplier = Mathf.Max(0.01f, multiplier);
-        maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealth * safeMultiplier));
+        instanceMultiplier = Mathf.Max(0.01f, multiplier);
+        if (characterData != null)
+        {
+            ApplyData(true);
+            return;
+        }
+
+        maxHealth = Mathf.Max(1, Mathf.RoundToInt(maxHealth * instanceMultiplier));
         currentHealth = maxHealth;
-        attackDamage = Mathf.Max(1, Mathf.RoundToInt(attackDamage * safeMultiplier));
-        moveSpeed = Mathf.Max(0f, moveSpeed * safeMultiplier);
-        attackSpeed = Mathf.Max(0f, attackSpeed / safeMultiplier);
+        attackDamage = Mathf.Max(1, Mathf.RoundToInt(attackDamage * instanceMultiplier));
+        moveSpeed = Mathf.Max(0f, moveSpeed * instanceMultiplier);
+        attackSpeed = Mathf.Max(0f, attackSpeed / instanceMultiplier);
         deathNotified = IsDead;
         HealthChanged?.Invoke(this);
     }

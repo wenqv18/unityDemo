@@ -129,6 +129,12 @@ public sealed class RuntimeUIManager : MonoBehaviour
 
     public void OpenDrawing()
     {
+        if (IsDrawingSummonCoolingDown())
+        {
+            Debug.Log("Drawing is cooling down.");
+            return;
+        }
+
         currentState = UIState.Drawing;
         Time.timeScale = 0f;
         SetOnly(drawingUI);
@@ -413,6 +419,13 @@ public sealed class RuntimeUIManager : MonoBehaviour
         }
 
         return player.GetComponent<CharacterRuntimeStats>();
+    }
+
+    private bool IsDrawingSummonCoolingDown()
+    {
+        GameObject player = GameObject.Find("Player");
+        PlayerSummonSpawner summonSpawner = player != null ? player.GetComponent<PlayerSummonSpawner>() : FindObjectOfType<PlayerSummonSpawner>(true);
+        return summonSpawner != null && summonSpawner.IsDrawingSummonCoolingDown;
     }
 
 private void BindPlayerHealthBar()

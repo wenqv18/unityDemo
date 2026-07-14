@@ -1,0 +1,14 @@
+{
+  "class_names": [
+    "Firetriangle",
+    "Strongcircle",
+    "circle",
+    "triangle"
+  ],
+  "class_to_idx": {
+    "Firetriangle": 0,
+    "Strongcircle": 1,
+    "circle": 2,
+    "triangle": 3
+  }
+}

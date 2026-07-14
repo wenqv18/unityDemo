@@ -23,6 +23,7 @@ public class DrawingCanvasPainter : MonoBehaviour, IPointerDownHandler, IPointer
     [SerializeField] private TMP_Text usageTmpText;
     [SerializeField] private DrawingTemplateRecognizer templateRecognizer;
     [SerializeField] private DrawingDatasetExporter datasetExporter;
+    [SerializeField] private DrawingOnnxPredictor onnxPredictor;
     [SerializeField] private DrawingHttpPredictor httpPredictor;
 
     private Texture2D drawingTexture;
@@ -131,7 +132,11 @@ public void SubmitDrawing()
             datasetExporter.Export(lastSubmittedTexture, lastSubmittedInkUsage);
         }
 
-        if (httpPredictor != null)
+        if (onnxPredictor != null)
+        {
+            onnxPredictor.Predict(lastSubmittedTexture, lastSubmittedInkUsage, lastSubmittedEnergyCost);
+        }
+        else if (httpPredictor != null)
         {
             httpPredictor.Predict(lastSubmittedTexture, lastSubmittedInkUsage, lastSubmittedEnergyCost);
         }

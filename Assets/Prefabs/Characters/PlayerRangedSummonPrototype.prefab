@@ -406,6 +406,8 @@ MonoBehaviour:
   disableCollidersOnDeath: 1
   disableBehavioursOnDeath: 1
   modelChildName: Model
+  deathSoundResourcePath: Sounds/Sound_Death
+  deathSoundVolume: 1
   fallbackDeathVisualDuration: 3.9
   onDeath:
     m_PersistentCalls:

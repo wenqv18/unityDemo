@@ -23,6 +23,11 @@ public static class SummonTargetCoordinator
     {
         if (target != null && target.CanBeTargeted)
         {
+            if (sharedTarget != target)
+            {
+                GameSoundPlayer.PlayAt(GameSoundPlayer.SummonBeginPath, target.transform.position);
+            }
+
             sharedTarget = target;
         }
     }
