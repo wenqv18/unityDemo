@@ -1,0 +1,184 @@
+using UnityEngine;
+
+/// <summary>
+/// Ranged summon combat brain. It shares summon targeting and uses RangedAttackBehaviour
+/// for projectile delivery.
+/// </summary>
+public sealed class RangedSummonAI : MonoBehaviour, ICharacterAnimationStateProvider
+{
+    [SerializeField] private CharacterRuntimeStats selfStats;
+    [SerializeField] private CombatIdentity selfIdentity;
+    [SerializeField] private RangedAttackBehaviour attackBehaviour;
+    [SerializeField] private CharacterActionController actionController;
+    [SerializeField] private SummonFollowController followController;
+    [SerializeField] private CombatFaction[] targetFactions = { CombatFaction.Enemy };
+    [SerializeField] private float detectionRange = 10f;
+    [SerializeField] private float targetRefreshInterval = 0.25f;
+    [SerializeField] private float combatMoveSpeedStatBonus = 2f;
+    [SerializeField] private float preferredDistance = 6f;
+    [SerializeField] private float distanceTolerance = 0.75f;
+    [SerializeField] private string currentState = "Idle";
+
+    private CombatIdentity currentTarget;
+    private float nextTargetRefreshTime;
+
+    public string AnimationStateName => currentState;
+    public bool HasActiveCombatTarget => HasTarget;
+    public bool WantsRunAnimation => currentState == "Chase" || currentState == "HoldDistance";
+    public bool WantsWalkAnimation => false;
+
+    private bool HasTarget => currentTarget != null && currentTarget.CanBeTargeted;
+    private float MoveSpeed => selfStats != null ? selfStats.GetMoveSpeedMetersPerSecond(HasTarget ? combatMoveSpeedStatBonus : 0f) : 2f;
+    private bool CanMoveNow => actionController == null || actionController.CanMove;
+
+    private void Awake()
+    {
+        ResolveReferences();
+    }
+
+    private void Update()
+    {
+        ResolveReferences();
+        if (selfStats == null || selfStats.IsDead || (actionController != null && actionController.IsDead))
+        {
+            ClearTarget();
+            SetFollowLocked(false);
+            currentState = "Idle";
+            return;
+        }
+
+        if (followController != null && followController.IsSpawnMoveLocked)
+        {
+            SetFollowLocked(false);
+            currentState = "Idle";
+            return;
+        }
+
+        RefreshTargetIfNeeded();
+        SetFollowLocked(HasTarget);
+        if (!HasTarget)
+        {
+            currentState = "Idle";
+            return;
+        }
+
+        RunRangedCombat();
+    }
+
+    private void RunRangedCombat()
+    {
+        Vector3 flatDelta = currentTarget.transform.position - transform.position;
+        flatDelta.y = 0f;
+        float distance = flatDelta.magnitude;
+        float tooNearDistance = Mathf.Max(0.5f, preferredDistance - distanceTolerance);
+        float tooFarDistance = preferredDistance + distanceTolerance;
+
+        if (distance > tooFarDistance)
+        {
+            currentState = "Chase";
+            if (CanMoveNow)
+            {
+                MoveFlatTowards(currentTarget.transform.position, MoveSpeed);
+            }
+            return;
+        }
+
+        if (distance < tooNearDistance && !IsTargetApproachingSelf(flatDelta))
+        {
+            currentState = "HoldDistance";
+            if (CanMoveNow)
+            {
+                Vector3 awayPosition = transform.position - flatDelta.normalized * (tooNearDistance - distance + 0.25f);
+                MoveFlatTowards(awayPosition, MoveSpeed);
+            }
+            return;
+        }
+
+        currentState = "Attack";
+        FaceFlatDirection(flatDelta);
+        if (actionController != null)
+        {
+            actionController.TryStartAttack(selfStats, currentTarget.Stats, attackBehaviour);
+        }
+    }
+
+    private void RefreshTargetIfNeeded()
+    {
+        if (Time.time < nextTargetRefreshTime && HasTarget)
+        {
+            return;
+        }
+
+        nextTargetRefreshTime = Time.time + targetRefreshInterval;
+        CombatIdentity nearest = CombatTargetFinder.FindNearestTarget(selfIdentity, targetFactions, detectionRange);
+        if (nearest != null)
+        {
+            currentTarget = nearest;
+            SummonTargetCoordinator.SetSharedTarget(nearest);
+            return;
+        }
+
+        CombatIdentity shared = SummonTargetCoordinator.SharedTarget;
+        currentTarget = shared != null && CombatTargetFinder.IsTargetFaction(shared.Faction, targetFactions) ? shared : null;
+    }
+
+    private bool IsTargetApproachingSelf(Vector3 selfToTarget)
+    {
+        if (currentTarget == null)
+        {
+            return false;
+        }
+
+        Vector3 targetForward = currentTarget.transform.forward;
+        targetForward.y = 0f;
+        if (targetForward.sqrMagnitude <= 0.0001f || selfToTarget.sqrMagnitude <= 0.0001f)
+        {
+            return false;
+        }
+
+        Vector3 targetToSelf = -selfToTarget.normalized;
+        return Vector3.Dot(targetForward.normalized, targetToSelf) > 0.45f;
+    }
+
+    private void ResolveReferences()
+    {
+        if (selfStats == null) selfStats = GetComponent<CharacterRuntimeStats>();
+        if (selfIdentity == null) selfIdentity = GetComponent<CombatIdentity>();
+        if (attackBehaviour == null) attackBehaviour = GetComponent<RangedAttackBehaviour>();
+        if (actionController == null) actionController = GetComponent<CharacterActionController>();
+        if (followController == null) followController = GetComponent<SummonFollowController>();
+    }
+
+    private void ClearTarget()
+    {
+        SummonTargetCoordinator.ClearIfTarget(currentTarget);
+        currentTarget = null;
+    }
+
+    private void SetFollowLocked(bool locked)
+    {
+        if (followController != null)
+        {
+            followController.SetExternalMovementLocked(locked);
+        }
+    }
+
+    private void MoveFlatTowards(Vector3 targetPosition, float speed)
+    {
+        Vector3 currentPosition = transform.position;
+        Vector3 target = new Vector3(targetPosition.x, currentPosition.y, targetPosition.z);
+        Vector3 nextPosition = Vector3.MoveTowards(currentPosition, target, speed * Time.deltaTime);
+        Vector3 movement = nextPosition - currentPosition;
+        transform.position = nextPosition;
+        FaceFlatDirection(movement);
+    }
+
+    private void FaceFlatDirection(Vector3 direction)
+    {
+        direction.y = 0f;
+        if (direction.sqrMagnitude > 0.0001f)
+        {
+            transform.rotation = Quaternion.LookRotation(direction.normalized, Vector3.up);
+        }
+    }
+}

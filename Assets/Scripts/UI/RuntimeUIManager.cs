@@ -1,3 +1,4 @@
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -31,7 +32,6 @@ public sealed class RuntimeUIManager : MonoBehaviour
 
     [Header("Scene Flow")]
     [SerializeField] private string levelSelectSceneName = "LevelSelectScene";
-    [SerializeField] private string nextLevelSceneName = "Level_02";
 
     [Header("Input")]
     [SerializeField] private KeyCode drawingKey = KeyCode.E;
@@ -198,7 +198,87 @@ public sealed class RuntimeUIManager : MonoBehaviour
     public void GoToNextLevel()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene(nextLevelSceneName);
+
+        string currentLevelSceneName = GetCurrentLevelSceneName();
+        string nextSceneName = GetNextLevelSceneName(currentLevelSceneName);
+        if (!string.IsNullOrEmpty(nextSceneName) && CanLoadScene(nextSceneName))
+        {
+            SceneManager.LoadScene(nextSceneName);
+            return;
+        }
+
+        SceneManager.LoadScene(levelSelectSceneName);
+    }
+
+    private string GetCurrentLevelSceneName()
+    {
+        Scene activeScene = SceneManager.GetActiveScene();
+        if (IsNumberedLevelScene(activeScene.name))
+        {
+            return activeScene.name;
+        }
+
+        for (int i = 0; i < SceneManager.sceneCount; i++)
+        {
+            Scene scene = SceneManager.GetSceneAt(i);
+            if (scene.IsValid() && scene.isLoaded && scene != gameObject.scene && IsNumberedLevelScene(scene.name))
+            {
+                return scene.name;
+            }
+        }
+
+        return null;
+    }
+
+    private static string GetNextLevelSceneName(string currentSceneName)
+    {
+        if (string.IsNullOrEmpty(currentSceneName))
+        {
+            return null;
+        }
+
+        int digitStart = currentSceneName.Length;
+        while (digitStart > 0 && char.IsDigit(currentSceneName[digitStart - 1]))
+        {
+            digitStart--;
+        }
+
+        if (digitStart == currentSceneName.Length)
+        {
+            return null;
+        }
+
+        string prefix = currentSceneName.Substring(0, digitStart);
+        string digits = currentSceneName.Substring(digitStart);
+        int levelNumber;
+        if (!int.TryParse(digits, out levelNumber))
+        {
+            return null;
+        }
+
+        return prefix + (levelNumber + 1).ToString(new string('0', digits.Length));
+    }
+
+    private static bool IsNumberedLevelScene(string sceneName)
+    {
+        return !string.IsNullOrEmpty(sceneName)
+            && sceneName.StartsWith("Level_")
+            && char.IsDigit(sceneName[sceneName.Length - 1]);
+    }
+
+    private static bool CanLoadScene(string sceneName)
+    {
+        for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
+        {
+            string scenePath = SceneUtility.GetScenePathByBuildIndex(i);
+            string buildSceneName = Path.GetFileNameWithoutExtension(scenePath);
+            if (buildSceneName == sceneName)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)

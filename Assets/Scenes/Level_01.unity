@@ -737,6 +737,18 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 880970725214738984, guid: c60edd51c065ceb46b345849a03bc106, type: 3}
   m_PrefabInstance: {fileID: 127340802}
   m_PrefabAsset: {fileID: 0}
+--- !u!134 &136652384
+PhysicMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  dynamicFriction: 0.6
+  staticFriction: 0.6
+  bounciness: 0
+  frictionCombine: 0
+  bounceCombine: 0
 --- !u!1001 &147808227
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2924,6 +2936,18 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3356751432537613521, guid: ffbddc4ef9676cc419e81e06aaa836d8, type: 3}
   m_PrefabInstance: {fileID: 524946527}
   m_PrefabAsset: {fileID: 0}
+--- !u!134 &544878689
+PhysicMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: 
+  dynamicFriction: 0.6
+  staticFriction: 0.6
+  bounciness: 0
+  frictionCombine: 0
+  bounceCombine: 0
 --- !u!1 &566925616
 GameObject:
   m_ObjectHideFlags: 0
@@ -2986,7 +3010,7 @@ BoxCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 566925616}
-  m_Material: {fileID: 1852951712}
+  m_Material: {fileID: 883539960}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -3065,10 +3089,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   summonPrefab: {fileID: 8586861265317919069, guid: d8cd83fbea0636f4db88c4a137512fa4, type: 3}
   rangedSummonPrefab: {fileID: 8586861265317919069, guid: c9497801cb5b6284e90662d5b36dcc6c, type: 3}
+  firemageSummonPrefab: {fileID: 8586861265317919069, guid: b5e1f6a9ac92680478ad8ef88d40ddfc, type: 3}
+  berserkerSummonPrefab: {fileID: 8586861265317919069, guid: 42317854b510e6b4d9c1c6d09057d3a7, type: 3}
   followTarget: {fileID: 566925621}
   spawnMinDistance: 3
   spawnMaxDistance: 8
   maxSummons: 5
+  summonEnergyData: {fileID: 11400000, guid: b3143d85e2709304e9a31062e4475212, type: 2}
+  rangedSummonEnergyData: {fileID: 11400000, guid: 7be3bd5ea1eb0bf488d337ffcce95e09, type: 2}
+  firemageSummonEnergyData: {fileID: 11400000, guid: 840875f0ea19e1d488581dd517553c90, type: 2}
+  berserkerSummonEnergyData: {fileID: 11400000, guid: 19c066f2aef7bd147b5709309449ab5f, type: 2}
+  summonVfxPrefab: {fileID: 0}
+  summonVfxAnchorName: Bottom
+  summonVfxFallbackLifetime: 3
 --- !u!114 &566925625
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4821,6 +4854,18 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 880970725214738984, guid: c60edd51c065ceb46b345849a03bc106, type: 3}
   m_PrefabInstance: {fileID: 866501729}
   m_PrefabAsset: {fileID: 0}
+--- !u!134 &883539960
+PhysicMaterial:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: ' (Instance) (Instance) (Instance) (Instance) (Instance)'
+  dynamicFriction: 0.6
+  staticFriction: 0.6
+  bounciness: 0
+  frictionCombine: 0
+  bounceCombine: 0
 --- !u!1001 &895447171
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6961,6 +7006,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: RangedArcherPrototype
       objectReference: {fileID: 0}
+    - target: {fileID: 7745855702636796386, guid: cae5199cb548a7344880239d21ea5974, type: 3}
+      propertyPath: m_Material
+      value: 
+      objectReference: {fileID: 136652384}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -9750,6 +9799,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3192288428971921273, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
+      propertyPath: m_Material
+      value: 
+      objectReference: {fileID: 544878689}
     - target: {fileID: 3514554908726404766, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
       value: 81.52861
@@ -10258,124 +10311,21 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 961422293}
     m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 2765371179243046821, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1787918603}
-    - targetCorrespondingSourceObject: {fileID: 2765371179243046821, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1787918602}
-    - targetCorrespondingSourceObject: {fileID: 2765371179243046821, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1787918601}
-    - targetCorrespondingSourceObject: {fileID: 2765371179243046821, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1787918608}
     - targetCorrespondingSourceObject: {fileID: 7662046230292140419, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1481019328}
   m_SourcePrefab: {fileID: 100100000, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
---- !u!1 &1787918594 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 2765371179243046821, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
-  m_PrefabInstance: {fileID: 1767918068}
-  m_PrefabAsset: {fileID: 0}
 --- !u!114 &1787918595 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: -2775748119202667137, guid: 026b8dd20ace3964a9191e90f0b574a4, type: 3}
   m_PrefabInstance: {fileID: 1767918068}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1787918594}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 259f5cbdbdc9b9e45b1609ef0d08fe32, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &1787918601
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1787918594}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e0549374773296c45b0e0608a1dfd371, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  selfStats: {fileID: 1787918595}
-  selfIdentity: {fileID: 1787918603}
-  attackBehaviour: {fileID: 1787918602}
-  actionController: {fileID: 0}
-  targetFactions: 0000000001000000
-  detectionRange: 12
-  targetRefreshInterval: 0.25
-  shareFactionTarget: 1
-  movementMode: 0
-  combatMoveSpeedStatBonus: 2
-  summonPlayerLeashDistance: 14
-  rangedPreferredDistance: 6
-  rangedDistanceTolerance: 0.75
-  patrolRadius: 5
-  patrolMinStepDistance: 0.8
-  patrolMaxStepDistance: 2
-  patrolPointReachDistance: 0.6
-  patrolRepathInterval: 3
-  patrolIdleTimeRange: {x: 0.6, y: 1.4}
-  currentState: 0
---- !u!114 &1787918602
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1787918594}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 846a52cb01f43ce448d4de6ab9b342ea, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  attackRange: 1.6
-  attackSpeedIntervalScale: 10
-  minimumAttackInterval: 0.1
-  rangeTolerance: 0.35
---- !u!114 &1787918603
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1787918594}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 939c0bad0c99b624e8210d079d3eda64, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  faction: 2
-  stats: {fileID: 1787918595}
---- !u!114 &1787918608
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1787918594}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 309cfba16dce05a4fa61d7e0ce9e5976, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  stats: {fileID: 0}
-  destroyOnDeath: 1
-  destroyDelay: 0
-  detachDeathVisual: 1
-  hideOriginalModelOnDeath: 1
-  disableCollidersOnDeath: 1
-  disableBehavioursOnDeath: 1
-  modelChildName: Model
-  fallbackDeathVisualDuration: 3.9
-  onDeath:
-    m_PersistentCalls:
-      m_Calls: []
 --- !u!1001 &1804007311
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10626,18 +10576,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5186735023777053022, guid: ac8efb728f1fb9b4092c4df591c827ca, type: 3}
   m_PrefabInstance: {fileID: 1829928622}
   m_PrefabAsset: {fileID: 0}
---- !u!134 &1852951712
-PhysicMaterial:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: ' (Instance) (Instance) (Instance) (Instance)'
-  dynamicFriction: 0.6
-  staticFriction: 0.6
-  bounciness: 0
-  frictionCombine: 0
-  bounceCombine: 0
 --- !u!1001 &1865439047
 PrefabInstance:
   m_ObjectHideFlags: 0

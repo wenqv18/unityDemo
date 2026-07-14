@@ -8,8 +8,6 @@ using UnityEngine.UI;
 /// </summary>
 public class DrawingCanvasPainter : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IDragHandler
 {
-    private const int MaximumEffectiveEnergyCost = 200;
-
     [Header("Drawing Area")]
     [SerializeField] private RectTransform paintingRange;
     [SerializeField] private RawImage drawingImage;
@@ -152,7 +150,7 @@ public void SubmitDrawing()
 private void CacheSubmittedDrawing()
     {
         lastSubmittedInkUsage = usedPixelCount;
-        lastSubmittedEnergyCost = CalculateEffectiveEnergyCost(usedPixelCount);
+        lastSubmittedEnergyCost = CalculateEnergyCost(usedPixelCount);
 
         if (lastSubmittedTexture == null || lastSubmittedTexture.width != textureWidth || lastSubmittedTexture.height != textureHeight)
         {
@@ -300,7 +298,7 @@ private void ResolveTextureSize()
 
 private void UpdateUsageText()
     {
-        string text = CalculateEffectiveEnergyCost(usedPixelCount).ToString();
+        string text = CalculateEnergyCost(usedPixelCount).ToString();
         if (usageText != null)
         {
             usageText.text = text;
@@ -317,8 +315,4 @@ private void UpdateUsageText()
         return Mathf.FloorToInt(Mathf.Max(0, inkUsage) * 2f / 100f);
     }
 
-    private static int CalculateEffectiveEnergyCost(int inkUsage)
-    {
-        return Mathf.Min(CalculateEnergyCost(inkUsage), MaximumEffectiveEnergyCost);
-    }
 }

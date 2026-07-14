@@ -80,9 +80,22 @@ public sealed class RangedProjectile : MonoBehaviour
 
     private void HitTarget()
     {
+        CharacterRuntimeStats hitTarget = target;
         if (target != null && !target.IsDead)
         {
             target.TakeDamage(damage);
+        }
+
+        ProjectileImpactEffect impactEffect = GetComponent<ProjectileImpactEffect>();
+        if (impactEffect != null)
+        {
+            impactEffect.PlayImpactEffect();
+        }
+
+        ProjectileAreaDamage areaDamage = GetComponent<ProjectileAreaDamage>();
+        if (areaDamage != null)
+        {
+            areaDamage.Apply(attacker, hitTarget, damage);
         }
 
         Destroy(gameObject);

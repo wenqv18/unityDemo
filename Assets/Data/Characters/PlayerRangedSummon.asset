@@ -15,8 +15,8 @@ MonoBehaviour:
   id: 5
   displayName: Player Ranged Summon
   prefab: {fileID: 8586861265317919069, guid: c9497801cb5b6284e90662d5b36dcc6c, type: 3}
-  maxHealth: 20
-  attackDamage: 10
-  attackSpeed: 25
+  maxHealth: 30
+  attackDamage: 15
+  attackSpeed: 20
   moveSpeed: 20
   defense: 0

@@ -1,7 +1,7 @@
 using UnityEngine;
 
 /// <summary>
-/// Base class for attack styles used by CombatUnitAI.
+/// Base class for attack styles used by unit AI scripts.
 /// Implementations decide how damage is delivered: melee contact, projectile, direct ranged hit, etc.
 /// </summary>
 public abstract class CombatAttackBehaviour : MonoBehaviour

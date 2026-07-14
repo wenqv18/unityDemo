@@ -11,6 +11,8 @@ public sealed class PlayerEnergyUI : MonoBehaviour
     [SerializeField] private Text legacyText;
     [SerializeField] private TMP_Text tmpText;
 
+    private bool isSubscribed;
+
     private void Awake()
     {
         ResolveText();
@@ -24,31 +26,21 @@ public sealed class PlayerEnergyUI : MonoBehaviour
 
     private void OnDisable()
     {
-        if (targetEnergy != null)
-        {
-            targetEnergy.EnergyChanged -= HandleEnergyChanged;
-        }
+        Unsubscribe();
     }
 
     public void Bind(PlayerEnergy energy)
     {
         if (targetEnergy == energy)
         {
+            Subscribe();
             Refresh();
             return;
         }
 
-        if (targetEnergy != null)
-        {
-            targetEnergy.EnergyChanged -= HandleEnergyChanged;
-        }
-
+        Unsubscribe();
         targetEnergy = energy;
-        if (targetEnergy != null)
-        {
-            targetEnergy.EnergyChanged += HandleEnergyChanged;
-        }
-
+        Subscribe();
         Refresh();
     }
 
@@ -82,5 +74,27 @@ public sealed class PlayerEnergyUI : MonoBehaviour
         {
             tmpText = GetComponent<TMP_Text>();
         }
+    }
+
+    private void Subscribe()
+    {
+        if (targetEnergy == null || isSubscribed)
+        {
+            return;
+        }
+
+        targetEnergy.EnergyChanged += HandleEnergyChanged;
+        isSubscribed = true;
+    }
+
+    private void Unsubscribe()
+    {
+        if (targetEnergy == null || !isSubscribed)
+        {
+            return;
+        }
+
+        targetEnergy.EnergyChanged -= HandleEnergyChanged;
+        isSubscribed = false;
     }
 }

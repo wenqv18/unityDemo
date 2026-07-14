@@ -10,10 +10,6 @@ using UnityEngine.Networking;
 /// </summary>
 public sealed class DrawingHttpPredictor : MonoBehaviour
 {
-    private const int BaseSummonEnergyCost = 100;
-    private const float MinimumSummonMultiplier = 0.5f;
-    private const float MaximumSummonMultiplier = 2f;
-
     [Serializable]
     private sealed class PredictResponse
     {
@@ -84,7 +80,7 @@ public sealed class DrawingHttpPredictor : MonoBehaviour
         }
     }
 
-private void HandleLabel(string label, float confidence, int energyCost)
+    private void HandleLabel(string label, float confidence, int energyCost)
     {
         string normalizedLabel = string.IsNullOrWhiteSpace(label) ? "unknown" : label.Trim().ToLowerInvariant();
 
@@ -96,41 +92,31 @@ private void HandleLabel(string label, float confidence, int energyCost)
         switch (normalizedLabel)
         {
             case "circle":
-                Debug.Log("圆的逻辑");
-                if (HasValidPersistentTarget(onCircle))
-                {
-                    onCircle.Invoke();
-                }
-                else
-                {
-                    TryInvokeSummon(false, energyCost);
-                }
+                TryInvokeSummon(false, energyCost);
                 break;
             case "triangle":
-                Debug.Log("三角的逻辑");
-                if (HasValidPersistentTarget(onTriangle))
-                {
-                    onTriangle.Invoke();
-                }
-                else
-                {
-                    TryInvokeSummon(true, energyCost);
-                }
+                TryInvokeSummon(true, energyCost);
+                break;
+            case "firetriangle":
+                TryInvokeSummon(PlayerSummonSpawner.SummonKind.Firemage, energyCost);
+                break;
+            case "strongcircle":
+                TryInvokeSummon(PlayerSummonSpawner.SummonKind.Berserker, energyCost);
                 break;
             default:
-                Debug.Log("无效/无法识别的逻辑");
+                Debug.Log("Invalid or unrecognized drawing.");
                 onUnknown?.Invoke();
                 break;
         }
     }
 
-private void TryInvokeSummon(bool ranged, int energyCost)
+    private void TryInvokeSummon(bool ranged, int energyCost)
     {
-        if (!TryCalculateSummonMultiplier(energyCost, out float multiplier, out int effectiveEnergyCost))
-        {
-            return;
-        }
+        TryInvokeSummon(ranged ? PlayerSummonSpawner.SummonKind.Ranged : PlayerSummonSpawner.SummonKind.Melee, energyCost);
+    }
 
+    private void TryInvokeSummon(PlayerSummonSpawner.SummonKind kind, int energyCost)
+    {
         GameObject player = GameObject.Find("Player");
         PlayerSummonSpawner spawner = player != null ? player.GetComponent<PlayerSummonSpawner>() : FindObjectOfType<PlayerSummonSpawner>(true);
         if (spawner == null)
@@ -139,67 +125,11 @@ private void TryInvokeSummon(bool ranged, int energyCost)
             return;
         }
 
-        if (!spawner.CanSpawnSummon(ranged))
+        if (!spawner.TrySpawnSummonWithEnergy(kind, energyCost, true, out float multiplier, out int effectiveEnergyCost))
         {
-            Debug.Log("Summon failed: summon limit reached or prefab missing.");
-            return;
-        }
-
-        PlayerEnergy playerEnergy = player != null ? player.GetComponent<PlayerEnergy>() : FindObjectOfType<PlayerEnergy>(true);
-        if (playerEnergy == null)
-        {
-            Debug.LogWarning("Summon failed: PlayerEnergy not found.");
-            return;
-        }
-
-        if (!playerEnergy.TrySpend(effectiveEnergyCost))
-        {
-            Debug.Log("Summon failed: not enough energy.");
-            return;
-        }
-
-        bool spawned = ranged ? spawner.TrySpawnRangedSummon(multiplier) : spawner.TrySpawnSummon(multiplier);
-        if (!spawned)
-        {
-            playerEnergy.Restore(effectiveEnergyCost);
-            Debug.Log("Summon failed: energy refunded.");
             return;
         }
 
         Debug.Log($"Summon created with energy {effectiveEnergyCost}, multiplier {multiplier:0.00}.");
-    }
-
-private static bool TryCalculateSummonMultiplier(int energyCost, out float multiplier, out int effectiveEnergyCost)
-    {
-        effectiveEnergyCost = Mathf.Clamp(energyCost, 0, BaseSummonEnergyCost * 2);
-        multiplier = effectiveEnergyCost / (float)BaseSummonEnergyCost;
-        if (multiplier < MinimumSummonMultiplier)
-        {
-            Debug.Log("Summon failed: drawing is too small.");
-            return false;
-        }
-
-        multiplier = Mathf.Min(multiplier, MaximumSummonMultiplier);
-        return true;
-    }
-
-
-
-private static bool HasValidPersistentTarget(UnityEvent unityEvent)
-    {
-        if (unityEvent == null)
-        {
-            return false;
-        }
-
-        for (int i = 0; i < unityEvent.GetPersistentEventCount(); i++)
-        {
-            if (unityEvent.GetPersistentTarget(i) != null)
-            {
-                return true;
-            }
-        }
-
-        return false;
     }
 }

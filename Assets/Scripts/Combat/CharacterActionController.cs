@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Coordinates high-priority character actions: attack, hit reaction, death, movement lock,
-/// and attack cooldown timing. CombatUnitAI asks this component before moving or attacking.
+/// and attack cooldown timing. Unit AI scripts ask this component before moving or attacking.
 /// </summary>
 [RequireComponent(typeof(CharacterRuntimeStats))]
 public sealed class CharacterActionController : MonoBehaviour

@@ -6,10 +6,17 @@ using UnityEngine;
 /// </summary>
 public sealed class GroundFollower : MonoBehaviour
 {
+    [Header("Ground Probe")]
     [SerializeField] private LayerMask groundMask = ~0;
+    [SerializeField] private Transform groundProbe;
     [SerializeField] private float raycastHeight = 3f;
     [SerializeField] private float raycastDistance = 8f;
     [SerializeField] private float groundOffset;
+    [SerializeField] private bool useFootAnchors;
+    [SerializeField] private Transform[] footAnchors;
+    [SerializeField] private bool useRendererBoundsForFooting;
+    [SerializeField] private Renderer[] footingRenderers;
+    [SerializeField] private float footGroundPadding = 0.02f;
     [SerializeField] private float maxSlopeAngle = 50f;
     [SerializeField] private bool snapToGround = true;
     [SerializeField] private bool blockTooSteepSlope = true;
@@ -25,7 +32,13 @@ public sealed class GroundFollower : MonoBehaviour
 
     private void Awake()
     {
+        ResolveGroundProbe();
         lastValidPosition = transform.position;
+    }
+
+    private void OnValidate()
+    {
+        ResolveGroundProbe();
     }
 
     private void LateUpdate()
@@ -38,7 +51,8 @@ public sealed class GroundFollower : MonoBehaviour
     /// </summary>
     public bool FollowGround()
     {
-        Vector3 origin = transform.position + Vector3.up * raycastHeight;
+        Vector3 probePosition = GetProbePosition();
+        Vector3 origin = probePosition + Vector3.up * raycastHeight;
         float distance = raycastHeight + raycastDistance;
 
         if (drawDebugRay)
@@ -46,7 +60,7 @@ public sealed class GroundFollower : MonoBehaviour
             Debug.DrawRay(origin, Vector3.down * distance, Color.green);
         }
 
-        if (!Physics.Raycast(origin, Vector3.down, out RaycastHit hit, distance, groundMask, QueryTriggerInteraction.Ignore))
+        if (!TryRaycastGround(origin, distance, out RaycastHit hit))
         {
             IsGrounded = false;
             IsOnTooSteepSlope = false;
@@ -65,7 +79,7 @@ public sealed class GroundFollower : MonoBehaviour
         }
 
         Vector3 position = transform.position;
-        position.y = hit.point.y + groundOffset;
+        position.y += hit.point.y + GetEffectiveGroundOffset() - GetLowestGroundReferenceY();
 
         if (snapToGround)
         {
@@ -83,5 +97,107 @@ public sealed class GroundFollower : MonoBehaviour
     public void SetGroundOffset(float offset)
     {
         groundOffset = offset;
+    }
+
+    private float GetEffectiveGroundOffset()
+    {
+        if (groundProbe != null)
+        {
+            return groundOffset;
+        }
+
+        return groundOffset + (useFootAnchors ? footGroundPadding : 0f);
+    }
+
+    private void ResolveGroundProbe()
+    {
+        if (groundProbe != null)
+        {
+            return;
+        }
+
+        Transform[] children = GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < children.Length; i++)
+        {
+            if (children[i] != null && children[i].name == "Ground")
+            {
+                groundProbe = children[i];
+                return;
+            }
+        }
+    }
+
+    private bool TryRaycastGround(Vector3 origin, float distance, out RaycastHit groundHit)
+    {
+        RaycastHit[] hits = Physics.RaycastAll(origin, Vector3.down, distance, groundMask, QueryTriggerInteraction.Ignore);
+        groundHit = default;
+
+        float closestDistance = float.PositiveInfinity;
+        for (int i = 0; i < hits.Length; i++)
+        {
+            RaycastHit hit = hits[i];
+            if (hit.collider == null || hit.collider.transform.IsChildOf(transform))
+            {
+                continue;
+            }
+
+            if (hit.distance < closestDistance)
+            {
+                closestDistance = hit.distance;
+                groundHit = hit;
+            }
+        }
+
+        return !float.IsPositiveInfinity(closestDistance);
+    }
+
+    private Vector3 GetProbePosition()
+    {
+        return groundProbe != null ? groundProbe.position : transform.position;
+    }
+
+    private float GetLowestGroundReferenceY()
+    {
+        if (groundProbe != null)
+        {
+            return groundProbe.position.y;
+        }
+
+        return GetLowestFootY();
+    }
+
+    private float GetLowestFootY()
+    {
+        if (!useFootAnchors && !useRendererBoundsForFooting)
+        {
+            return transform.position.y;
+        }
+
+        float lowestY = float.PositiveInfinity;
+        if (footAnchors != null)
+        {
+            for (int i = 0; i < footAnchors.Length; i++)
+            {
+                Transform foot = footAnchors[i];
+                if (foot != null)
+                {
+                    lowestY = Mathf.Min(lowestY, foot.position.y);
+                }
+            }
+        }
+
+        if (useRendererBoundsForFooting && footingRenderers != null)
+        {
+            for (int i = 0; i < footingRenderers.Length; i++)
+            {
+                Renderer footingRenderer = footingRenderers[i];
+                if (footingRenderer != null && footingRenderer.enabled)
+                {
+                    lowestY = Mathf.Min(lowestY, footingRenderer.bounds.min.y);
+                }
+            }
+        }
+
+        return float.IsPositiveInfinity(lowestY) ? transform.position.y : lowestY;
     }
 }

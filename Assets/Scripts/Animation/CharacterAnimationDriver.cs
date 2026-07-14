@@ -1,21 +1,20 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Bridges gameplay state to the character Animator. Action priority is owned by CharacterActionController;
-/// this component only plays requested action states and low-priority locomotion loops.
+/// Bridges gameplay state to the character Animator. Action priority is owned by
+/// CharacterActionController; this component only plays requested action states and
+/// low-priority locomotion loops.
 /// </summary>
 public sealed class CharacterAnimationDriver : MonoBehaviour
 {
     [SerializeField] private Animator animator;
     [SerializeField] private CharacterRuntimeStats stats;
-    [SerializeField] private CombatUnitAI combatAI;
-    [SerializeField] private PlayerSummonController summonController;
     [SerializeField] private CharacterActionController actionController;
     [SerializeField] private string walkStateName = "Walk";
     [SerializeField] private string runStateName = "Run";
     [SerializeField] private string standStateName = "Summon_0Stand";
     [SerializeField] private string attackStateName = "Attack";
-    [SerializeField] private string attackSecondStateName;
     [SerializeField] private string hitStateName = "Hit";
     [SerializeField] private string deathStateName = "Death";
     [SerializeField] private float movementThreshold = 0.05f;
@@ -24,10 +23,8 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
     [SerializeField] private float attackLockDuration = 1.667f;
     [SerializeField] private float hitLockDuration = 0.7f;
     [SerializeField] private float deathDuration = 3.9f;
-    [SerializeField, Range(0.01f, 0.99f)] private float attackSecondStateStartNormalizedTime = 0.5f;
 
-
-    private Coroutine attackSequenceRoutine;
+    private readonly List<ICharacterAnimationStateProvider> stateProviders = new List<ICharacterAnimationStateProvider>();
     private Vector3 previousPosition;
     private float actionLockedUntil;
     private string currentLoopState;
@@ -40,8 +37,6 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
     private int standFullPathHash;
     private int attackStateHash;
     private int attackFullPathHash;
-    private int attackSecondStateHash;
-    private int attackSecondFullPathHash;
     private int hitStateHash;
     private int hitFullPathHash;
     private int deathStateHash;
@@ -97,23 +92,18 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
         previousPosition = transform.position;
     }
 
-    /// <summary>
-    /// Plays the configured attack action and prevents locomotion from overriding it until duration ends.
-    /// </summary>
     public void PlayAttack()
     {
         PlayAttack(AttackDuration);
     }
 
+    /// <summary>
+    /// Plays one complete attack animation. Ranged projectile timing is controlled by
+    /// CharacterActionController.attackHitNormalizedTime, not by a second animation state.
+    /// </summary>
     public void PlayAttack(float duration)
     {
-        float safeDuration = Mathf.Max(duration, fallbackActionLockDuration);
-        if (PlaySplitAttack(safeDuration))
-        {
-            return;
-        }
-
-        PlayAction(attackStateName, safeDuration);
+        PlayAction(attackStateName, Mathf.Max(duration, fallbackActionLockDuration));
     }
 
     public void PlayHit()
@@ -128,7 +118,6 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
             return;
         }
 
-        StopAttackSequence();
         PlayAction(hitStateName, Mathf.Max(duration, fallbackActionLockDuration));
     }
 
@@ -140,7 +129,6 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
         }
 
         deathPlayed = true;
-        StopAttackSequence();
         actionLockedUntil = float.PositiveInfinity;
         currentLoopState = null;
         if (animator != null && HasState(deathStateName))
@@ -166,19 +154,25 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
             stats = GetComponent<CharacterRuntimeStats>();
         }
 
-        if (combatAI == null)
-        {
-            combatAI = GetComponent<CombatUnitAI>();
-        }
-
-        if (summonController == null)
-        {
-            summonController = GetComponent<PlayerSummonController>();
-        }
-
         if (actionController == null)
         {
             actionController = GetComponent<CharacterActionController>();
+        }
+
+        CacheStateProviders();
+    }
+
+    private void CacheStateProviders()
+    {
+        stateProviders.Clear();
+        MonoBehaviour[] behaviours = GetComponents<MonoBehaviour>();
+        for (int i = 0; i < behaviours.Length; i++)
+        {
+            ICharacterAnimationStateProvider provider = behaviours[i] as ICharacterAnimationStateProvider;
+            if (provider != null && behaviours[i] != this)
+            {
+                stateProviders.Add(provider);
+            }
         }
     }
 
@@ -192,8 +186,6 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
         standFullPathHash = Animator.StringToHash("Base Layer." + standStateName);
         attackStateHash = Animator.StringToHash(attackStateName);
         attackFullPathHash = Animator.StringToHash("Base Layer." + attackStateName);
-        attackSecondStateHash = Animator.StringToHash(attackSecondStateName);
-        attackSecondFullPathHash = Animator.StringToHash("Base Layer." + attackSecondStateName);
         hitStateHash = Animator.StringToHash(hitStateName);
         hitFullPathHash = Animator.StringToHash("Base Layer." + hitStateName);
         deathStateHash = Animator.StringToHash(deathStateName);
@@ -207,7 +199,7 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
             return deathStateName;
         }
 
-        if (combatAI != null && combatAI.CurrentStateName == "Attack" && HasState(standStateName))
+        if (HasProviderState("Attack") && HasState(standStateName))
         {
             return standStateName;
         }
@@ -227,32 +219,61 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
 
     private bool ShouldUseRunAnimation()
     {
-        if (summonController != null && summonController.IsReturningToPlayer)
+        for (int i = 0; i < stateProviders.Count; i++)
         {
-            return true;
-        }
-
-        if (combatAI != null)
-        {
-            string state = combatAI.CurrentStateName;
-            if (state == "Chase" || state == "HoldDistance")
+            if (stateProviders[i].WantsRunAnimation)
             {
                 return true;
             }
         }
 
-        Vector3 delta = transform.position - previousPosition;
-        delta.y = 0f;
-        float speed = delta.magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
-        return speed > movementThreshold && combatAI != null && combatAI.HasActiveTarget;
+        return GetFlatSpeed() > movementThreshold && HasActiveCombatTarget();
     }
 
     private bool ShouldUseWalkAnimation()
     {
+        for (int i = 0; i < stateProviders.Count; i++)
+        {
+            if (stateProviders[i].WantsWalkAnimation)
+            {
+                return GetFlatSpeed() > movementThreshold;
+            }
+        }
+
+        return GetFlatSpeed() > movementThreshold;
+    }
+
+    private bool HasActiveCombatTarget()
+    {
+        for (int i = 0; i < stateProviders.Count; i++)
+        {
+            if (stateProviders[i].HasActiveCombatTarget)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool HasProviderState(string stateName)
+    {
+        for (int i = 0; i < stateProviders.Count; i++)
+        {
+            if (stateProviders[i].AnimationStateName == stateName)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private float GetFlatSpeed()
+    {
         Vector3 delta = transform.position - previousPosition;
         delta.y = 0f;
-        float speed = delta.magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
-        return speed > movementThreshold;
+        return delta.magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
     }
 
     private void HandleDied(CharacterRuntimeStats deadStats)
@@ -267,47 +288,9 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
             return;
         }
 
-        StopAttackSequence();
         animator.CrossFadeInFixedTime(stateName, crossFadeDuration);
         actionLockedUntil = Time.time + Mathf.Max(0f, lockDuration);
         currentLoopState = null;
-    }
-
-    private bool PlaySplitAttack(float lockDuration)
-    {
-        if (animator == null || string.IsNullOrEmpty(attackSecondStateName) || !HasState(attackStateName) || !HasState(attackSecondStateName))
-        {
-            return false;
-        }
-
-        StopAttackSequence();
-        animator.CrossFadeInFixedTime(attackStateName, crossFadeDuration);
-        actionLockedUntil = Time.time + Mathf.Max(0f, lockDuration);
-        currentLoopState = null;
-        attackSequenceRoutine = StartCoroutine(PlaySplitAttackRoutine(lockDuration));
-        return true;
-    }
-
-    private System.Collections.IEnumerator PlaySplitAttackRoutine(float lockDuration)
-    {
-        float switchDelay = Mathf.Max(0f, lockDuration * Mathf.Clamp01(attackSecondStateStartNormalizedTime));
-        yield return new WaitForSeconds(switchDelay);
-
-        if (!deathPlayed && animator != null && HasState(attackSecondStateName))
-        {
-            animator.CrossFadeInFixedTime(attackSecondStateName, crossFadeDuration);
-        }
-
-        attackSequenceRoutine = null;
-    }
-
-    private void StopAttackSequence()
-    {
-        if (attackSequenceRoutine != null)
-        {
-            StopCoroutine(attackSequenceRoutine);
-            attackSequenceRoutine = null;
-        }
     }
 
     private void CrossFadeLoop(string stateName)
@@ -346,11 +329,6 @@ public sealed class CharacterAnimationDriver : MonoBehaviour
         if (stateName == attackStateName)
         {
             return animator.HasState(0, attackStateHash) || animator.HasState(0, attackFullPathHash);
-        }
-
-        if (stateName == attackSecondStateName)
-        {
-            return animator.HasState(0, attackSecondStateHash) || animator.HasState(0, attackSecondFullPathHash);
         }
 
         if (stateName == hitStateName)
