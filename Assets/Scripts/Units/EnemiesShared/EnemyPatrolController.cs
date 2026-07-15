@@ -18,6 +18,7 @@ public sealed class EnemyPatrolController : MonoBehaviour, ICharacterAnimationSt
     private float patrolPausedUntil;
     private bool externalMovementLocked;
     private CharacterActionController actionController;
+    private UnitNavigationMover navigationMover;
 
     public string AnimationStateName => "Patrol";
     public bool HasActiveCombatTarget => false;
@@ -28,6 +29,12 @@ public sealed class EnemyPatrolController : MonoBehaviour, ICharacterAnimationSt
     {
         homePosition = transform.position;
         actionController = GetComponent<CharacterActionController>();
+        navigationMover = GetComponent<UnitNavigationMover>();
+        if (navigationMover == null)
+        {
+            navigationMover = gameObject.AddComponent<UnitNavigationMover>();
+        }
+
         PickPatrolPoint();
     }
 
@@ -108,6 +115,12 @@ public sealed class EnemyPatrolController : MonoBehaviour, ICharacterAnimationSt
     {
         Vector3 currentPosition = transform.position;
         Vector3 target = new Vector3(targetPosition.x, currentPosition.y, targetPosition.z);
+        if (navigationMover != null)
+        {
+            navigationMover.MoveTowards(targetPosition, speed);
+            return;
+        }
+
         Vector3 nextPosition = Vector3.MoveTowards(currentPosition, target, speed * Time.deltaTime);
         Vector3 movement = nextPosition - currentPosition;
         transform.position = nextPosition;

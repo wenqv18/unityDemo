@@ -26,6 +26,13 @@ public sealed class PlayerSummonSpawner : MonoBehaviour
     [SerializeField] private float spawnMaxDistance = 8f;
     [SerializeField] private float berserkerSpawnYOffset = 1f;
     [SerializeField] private int maxSummons = 5;
+    [Header("Summon Placement")]
+    [SerializeField] private float spawnSearchStepDistance = 0.75f;
+    [SerializeField] private int spawnSearchDirectionAttempts = 8;
+    [SerializeField] private float spawnGroundRaycastHeight = 8f;
+    [SerializeField] private float spawnGroundRaycastDistance = 16f;
+    [SerializeField] private float spawnClearRadius = 0.8f;
+    [SerializeField] private float spawnWallCheckHeight = 0.9f;
     [Header("Summon Energy")]
     [SerializeField] private SummonEnergyData summonEnergyData;
     [SerializeField] private SummonEnergyData rangedSummonEnergyData;
@@ -226,18 +233,24 @@ public sealed class PlayerSummonSpawner : MonoBehaviour
             return false;
         }
 
-        Vector2 randomCircle = Random.insideUnitCircle;
-        if (randomCircle.sqrMagnitude <= 0.01f)
+        if (!CombatSpatialQuery.TryFindSummonPoint(
+                transform,
+                spawnMinDistance,
+                spawnMaxDistance,
+                spawnSearchStepDistance,
+                spawnSearchDirectionAttempts,
+                spawnClearRadius,
+                spawnGroundRaycastHeight,
+                spawnGroundRaycastDistance,
+                spawnWallCheckHeight,
+                out Vector3 spawnPosition))
         {
-            randomCircle = Vector2.right;
+            Debug.Log("Summon failed: no valid ground point found.");
+            return false;
         }
 
-        float safeSpawnMaxDistance = Mathf.Max(spawnMinDistance, spawnMaxDistance);
-        float spawnDistance = Random.Range(spawnMinDistance, safeSpawnMaxDistance);
-        randomCircle = randomCircle.normalized * spawnDistance;
-
         float yOffset = kind == SummonKind.Berserker ? berserkerSpawnYOffset : 0f;
-        Vector3 spawnPosition = transform.position + new Vector3(randomCircle.x, yOffset, randomCircle.y);
+        spawnPosition += Vector3.up * yOffset;
         GameObject summon = Instantiate(prefab, spawnPosition, Quaternion.identity);
         summon.name = $"Summon_{nextSummonIndex++}";
         ApplySummonMultiplier(summon, statMultiplier);

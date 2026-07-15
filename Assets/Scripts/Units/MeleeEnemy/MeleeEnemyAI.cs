@@ -10,6 +10,7 @@ public sealed class MeleeEnemyAI : MonoBehaviour, ICharacterAnimationStateProvid
     [SerializeField] private MeleeAttackBehaviour attackBehaviour;
     [SerializeField] private CharacterActionController actionController;
     [SerializeField] private EnemyPatrolController patrolController;
+    [SerializeField] private UnitNavigationMover navigationMover;
     [SerializeField] private CombatFaction[] targetFactions = { CombatFaction.Player, CombatFaction.Summon };
     [SerializeField] private float detectionRange = 10f;
     [SerializeField] private float targetRefreshInterval = 0.25f;
@@ -65,12 +66,13 @@ public sealed class MeleeEnemyAI : MonoBehaviour, ICharacterAnimationStateProvid
         Vector3 flatDelta = currentTarget.transform.position - transform.position;
         flatDelta.y = 0f;
         float attackRange = attackBehaviour != null ? attackBehaviour.AttackRange : 1.5f;
-        if (flatDelta.sqrMagnitude > attackRange * attackRange)
+        bool hasClearLine = navigationMover == null || navigationMover.HasClearLineTo(currentTarget.transform);
+        if (flatDelta.sqrMagnitude > attackRange * attackRange || !hasClearLine)
         {
             currentState = "Chase";
             if (CanMoveNow)
             {
-                MoveFlatTowards(currentTarget.transform.position, CombatMoveSpeed);
+                MoveFlatTowards(currentTarget.transform.position, CombatMoveSpeed, attackRange * 0.9f);
             }
             return;
         }
@@ -101,6 +103,8 @@ public sealed class MeleeEnemyAI : MonoBehaviour, ICharacterAnimationStateProvid
         if (attackBehaviour == null) attackBehaviour = GetComponent<MeleeAttackBehaviour>();
         if (actionController == null) actionController = GetComponent<CharacterActionController>();
         if (patrolController == null) patrolController = GetComponent<EnemyPatrolController>();
+        if (navigationMover == null) navigationMover = GetComponent<UnitNavigationMover>();
+        if (navigationMover == null) navigationMover = gameObject.AddComponent<UnitNavigationMover>();
     }
 
     private void SetPatrolLocked(bool locked)
@@ -111,8 +115,14 @@ public sealed class MeleeEnemyAI : MonoBehaviour, ICharacterAnimationStateProvid
         }
     }
 
-    private void MoveFlatTowards(Vector3 targetPosition, float speed)
+    private void MoveFlatTowards(Vector3 targetPosition, float speed, float stoppingDistance = 0f)
     {
+        if (navigationMover != null)
+        {
+            navigationMover.MoveTowards(targetPosition, speed, stoppingDistance);
+            return;
+        }
+
         Vector3 currentPosition = transform.position;
         Vector3 target = new Vector3(targetPosition.x, currentPosition.y, targetPosition.z);
         Vector3 nextPosition = Vector3.MoveTowards(currentPosition, target, speed * Time.deltaTime);

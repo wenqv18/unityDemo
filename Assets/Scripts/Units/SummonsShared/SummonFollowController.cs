@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// Shared non-combat summon movement: keeps distance from the player, patrols nearby,
-/// and returns with run animation when too far away.
+/// and returns to the current anchor. A command marker overrides the player as return anchor.
 /// </summary>
 public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationStateProvider
 {
@@ -22,6 +22,7 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
     [SerializeField] private float returnCompleteDistance = 4.5f;
     [SerializeField] private float returnMoveSpeedStatBonus = 2f;
     [SerializeField] private float initialSpawnMoveLockDuration = 1f;
+    [SerializeField] private float commandPatrolSpeedMultiplier = 0.45f;
 
     private Vector3 patrolPoint;
     private Vector3 patrolOffset;
@@ -30,16 +31,18 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
     private Vector3 previousFollowTargetPosition;
     private bool hasPreviousFollowTargetPosition;
     private bool isReturningToPlayer;
+    private bool isMovingToCommandPoint;
     private bool externalMovementLocked;
     private Action releasedCallback;
     private CharacterActionController actionController;
+    private UnitNavigationMover navigationMover;
 
     private float MoveSpeed => runtimeStats != null ? runtimeStats.MoveSpeed : (characterData != null ? Mathf.Max(0f, characterData.MoveSpeed) * 0.2f : fallbackMoveSpeedMetersPerSecond);
     private float ReturnMoveSpeed => runtimeStats != null ? runtimeStats.GetMoveSpeedMetersPerSecond(returnMoveSpeedStatBonus) : MoveSpeed;
 
     public bool IsReturningToPlayer => isReturningToPlayer;
     public bool IsSpawnMoveLocked => Time.time < spawnMoveLockUntilTime;
-    public string AnimationStateName => IsSpawnMoveLocked ? "SpawnLock" : (isReturningToPlayer ? "Return" : "Patrol");
+    public string AnimationStateName => IsSpawnMoveLocked ? "SpawnLock" : (isReturningToPlayer ? "Return" : (isMovingToCommandPoint ? "Command" : "Patrol"));
     public bool HasActiveCombatTarget => false;
     public bool WantsRunAnimation => !IsSpawnMoveLocked && isReturningToPlayer;
     public bool WantsWalkAnimation => !IsSpawnMoveLocked && !externalMovementLocked;
@@ -62,6 +65,12 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
     {
         StartSpawnMoveLock();
         actionController = GetComponent<CharacterActionController>();
+        navigationMover = GetComponent<UnitNavigationMover>();
+        if (navigationMover == null)
+        {
+            navigationMover = gameObject.AddComponent<UnitNavigationMover>();
+        }
+
         if (runtimeStats == null)
         {
             runtimeStats = GetComponent<CharacterRuntimeStats>();
@@ -95,26 +104,39 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
             return;
         }
 
+        bool hasCommandMarker = SummonCommandPoint.HasMarker;
         Vector3 playerPosition = followTarget.position;
         Vector3 flatFromPlayer = transform.position - playerPosition;
         flatFromPlayer.y = 0f;
         float distanceFromPlayer = flatFromPlayer.magnitude;
         bool playerIsMoving = IsFollowTargetMoving(playerPosition);
 
-        if (ShouldReturnToPlayer(distanceFromPlayer))
-        {
-            ReturnToPlayer(playerPosition, flatFromPlayer, distanceFromPlayer);
-            return;
-        }
-
         if (distanceFromPlayer < minimumPlayerDistance)
         {
             isReturningToPlayer = false;
+            isMovingToCommandPoint = false;
             Vector3 safeDirection = GetSafeDirectionAwayFromPlayer(flatFromPlayer);
             patrolOffset = safeDirection * patrolMinDistance;
             patrolPoint = playerPosition + safeDirection * patrolMinDistance;
             nextPatrolPickTime = Time.time + patrolRepathInterval;
             MoveFlatTowards(patrolPoint, MoveSpeed);
+            return;
+        }
+
+        Vector3 anchorPosition = hasCommandMarker ? SummonCommandPoint.MarkerPosition : playerPosition;
+        Vector3 flatFromAnchor = transform.position - anchorPosition;
+        flatFromAnchor.y = 0f;
+        float distanceFromAnchor = flatFromAnchor.magnitude;
+
+        if (hasCommandMarker)
+        {
+            PatrolAroundCommandPoint(anchorPosition, flatFromAnchor, distanceFromAnchor);
+            return;
+        }
+
+        if (ShouldReturnToAnchor(distanceFromAnchor, false))
+        {
+            ReturnToAnchor(anchorPosition, flatFromAnchor, distanceFromAnchor, false, returnCompleteDistance);
             return;
         }
 
@@ -130,30 +152,99 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
         }
 
         isReturningToPlayer = false;
+        isMovingToCommandPoint = false;
         float patrolSpeed = playerIsMoving ? MoveSpeed : MoveSpeed * idlePatrolSpeedMultiplier;
         MoveFlatTowards(patrolPoint, patrolSpeed);
     }
 
-    private bool ShouldReturnToPlayer(float distanceFromPlayer)
+    private bool ShouldReturnToAnchor(float distanceFromAnchor, bool anchorIsCommandPoint)
     {
-        return isReturningToPlayer ? distanceFromPlayer > returnCompleteDistance : distanceFromPlayer > returnToPlayerDistance;
+        float completeDistance = anchorIsCommandPoint ? SummonCommandPoint.MarkerRadius : returnCompleteDistance;
+        return isReturningToPlayer ? distanceFromAnchor > completeDistance : distanceFromAnchor > returnToPlayerDistance;
     }
 
-    private void ReturnToPlayer(Vector3 playerPosition, Vector3 flatFromPlayer, float distanceFromPlayer)
+    private void ReturnToAnchor(Vector3 anchorPosition, Vector3 flatFromAnchor, float distanceFromAnchor, bool anchorIsCommandPoint, float arrivalDistance)
     {
+        if (anchorIsCommandPoint && distanceFromAnchor <= arrivalDistance)
+        {
+            isReturningToPlayer = false;
+            isMovingToCommandPoint = true;
+            PickNewCommandPatrolPoint(anchorPosition, arrivalDistance);
+            return;
+        }
+
         isReturningToPlayer = true;
+        isMovingToCommandPoint = anchorIsCommandPoint;
         float targetDistance = Mathf.Clamp(returnCompleteDistance, patrolMinDistance, patrolMaxDistance);
-        Vector3 returnDirection = GetSafeDirectionAwayFromPlayer(flatFromPlayer);
+        Vector3 returnDirection = GetSafeDirectionAwayFromPlayer(flatFromAnchor);
         patrolOffset = returnDirection * targetDistance;
-        patrolPoint = playerPosition + patrolOffset;
+        patrolPoint = anchorIsCommandPoint ? anchorPosition : anchorPosition + patrolOffset;
         nextPatrolPickTime = Time.time + patrolRepathInterval;
         MoveFlatTowards(patrolPoint, ReturnMoveSpeed);
 
-        if (distanceFromPlayer <= returnCompleteDistance + patrolPointReachDistance)
+        if (distanceFromAnchor <= arrivalDistance)
         {
             isReturningToPlayer = false;
-            PickNewPatrolPoint();
+            if (anchorIsCommandPoint)
+            {
+                PickNewCommandPatrolPoint(anchorPosition, arrivalDistance);
+            }
+            else
+            {
+                PickNewPatrolPoint();
+            }
         }
+    }
+
+    private void PatrolAroundCommandPoint(Vector3 commandPoint, Vector3 flatFromCommandPoint, float distanceFromCommandPoint)
+    {
+        float commandRadius = Mathf.Max(patrolPointReachDistance, SummonCommandPoint.MarkerRadius);
+        if (ShouldReturnToCommandPoint(distanceFromCommandPoint, commandRadius))
+        {
+            ReturnToAnchor(commandPoint, flatFromCommandPoint, distanceFromCommandPoint, true, commandRadius);
+            return;
+        }
+
+        if (isReturningToPlayer)
+        {
+            isReturningToPlayer = false;
+            PickNewCommandPatrolPoint(commandPoint, commandRadius);
+        }
+
+        isMovingToCommandPoint = true;
+
+        float reachDistanceSqr = patrolPointReachDistance * patrolPointReachDistance;
+        Vector3 flatToPatrolPoint = patrolPoint - transform.position;
+        flatToPatrolPoint.y = 0f;
+        if (flatToPatrolPoint.sqrMagnitude <= reachDistanceSqr
+            || Time.time >= nextPatrolPickTime
+            || IsPatrolPointOutsideCommandRadius(patrolPoint, commandPoint, commandRadius))
+        {
+            PickNewCommandPatrolPoint(commandPoint, commandRadius);
+        }
+
+        float commandPatrolSpeed = MoveSpeed * Mathf.Max(0.05f, commandPatrolSpeedMultiplier);
+        MoveFlatTowards(patrolPoint, commandPatrolSpeed);
+    }
+
+    private bool ShouldReturnToCommandPoint(float distanceFromCommandPoint, float commandRadius)
+    {
+        return isReturningToPlayer ? distanceFromCommandPoint > commandRadius : distanceFromCommandPoint > commandRadius + patrolPointReachDistance;
+    }
+
+    private void PickNewCommandPatrolPoint(Vector3 commandPoint, float commandRadius)
+    {
+        Vector2 randomCircle = UnityEngine.Random.insideUnitCircle * Mathf.Max(0.1f, commandRadius);
+        patrolOffset = new Vector3(randomCircle.x, 0f, randomCircle.y);
+        patrolPoint = commandPoint + patrolOffset;
+        nextPatrolPickTime = Time.time + UnityEngine.Random.Range(patrolRepathInterval * 0.85f, patrolRepathInterval * 1.25f);
+    }
+
+    private bool IsPatrolPointOutsideCommandRadius(Vector3 point, Vector3 commandPoint, float commandRadius)
+    {
+        Vector3 flatDelta = point - commandPoint;
+        flatDelta.y = 0f;
+        return flatDelta.sqrMagnitude > commandRadius * commandRadius;
     }
 
     private void PickNewPatrolPoint()
@@ -246,6 +337,12 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
         Vector3 currentPosition = transform.position;
         Vector3 target = new Vector3(targetPosition.x, currentPosition.y, targetPosition.z);
         FaceFlatDirection(target - currentPosition);
+        if (navigationMover != null)
+        {
+            navigationMover.MoveTowards(targetPosition, speed);
+            return;
+        }
+
         Vector3 nextPosition = Vector3.MoveTowards(currentPosition, target, speed * Time.deltaTime);
         transform.position = nextPosition;
     }

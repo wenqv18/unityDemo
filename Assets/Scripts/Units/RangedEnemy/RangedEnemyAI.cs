@@ -10,6 +10,7 @@ public sealed class RangedEnemyAI : MonoBehaviour, ICharacterAnimationStateProvi
     [SerializeField] private RangedAttackBehaviour attackBehaviour;
     [SerializeField] private CharacterActionController actionController;
     [SerializeField] private EnemyPatrolController patrolController;
+    [SerializeField] private UnitNavigationMover navigationMover;
     [SerializeField] private CombatFaction[] targetFactions = { CombatFaction.Player, CombatFaction.Summon };
     [SerializeField] private float detectionRange = 10f;
     [SerializeField] private float targetRefreshInterval = 0.25f;
@@ -69,13 +70,14 @@ public sealed class RangedEnemyAI : MonoBehaviour, ICharacterAnimationStateProvi
         float distance = flatDelta.magnitude;
         float tooNearDistance = Mathf.Max(0.5f, preferredDistance - distanceTolerance);
         float tooFarDistance = preferredDistance + distanceTolerance;
+        bool hasClearLine = navigationMover == null || navigationMover.HasClearLineTo(currentTarget.transform);
 
-        if (distance > tooFarDistance)
+        if (distance > tooFarDistance || !hasClearLine)
         {
             currentState = "Chase";
             if (CanMoveNow)
             {
-                MoveFlatTowards(currentTarget.transform.position, CombatMoveSpeed);
+                MoveFlatTowards(currentTarget.transform.position, CombatMoveSpeed, preferredDistance);
             }
             return;
         }
@@ -135,6 +137,8 @@ public sealed class RangedEnemyAI : MonoBehaviour, ICharacterAnimationStateProvi
         if (attackBehaviour == null) attackBehaviour = GetComponent<RangedAttackBehaviour>();
         if (actionController == null) actionController = GetComponent<CharacterActionController>();
         if (patrolController == null) patrolController = GetComponent<EnemyPatrolController>();
+        if (navigationMover == null) navigationMover = GetComponent<UnitNavigationMover>();
+        if (navigationMover == null) navigationMover = gameObject.AddComponent<UnitNavigationMover>();
     }
 
     private void SetPatrolLocked(bool locked)
@@ -145,8 +149,14 @@ public sealed class RangedEnemyAI : MonoBehaviour, ICharacterAnimationStateProvi
         }
     }
 
-    private void MoveFlatTowards(Vector3 targetPosition, float speed)
+    private void MoveFlatTowards(Vector3 targetPosition, float speed, float stoppingDistance = 0f)
     {
+        if (navigationMover != null)
+        {
+            navigationMover.MoveTowards(targetPosition, speed, stoppingDistance);
+            return;
+        }
+
         Vector3 currentPosition = transform.position;
         Vector3 target = new Vector3(targetPosition.x, currentPosition.y, targetPosition.z);
         Vector3 nextPosition = Vector3.MoveTowards(currentPosition, target, speed * Time.deltaTime);

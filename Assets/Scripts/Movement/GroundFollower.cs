@@ -8,6 +8,7 @@ public sealed class GroundFollower : MonoBehaviour
 {
     [Header("Ground Probe")]
     [SerializeField] private LayerMask groundMask = ~0;
+    [SerializeField] private bool forceGroundLayerMask = true;
     [SerializeField] private Transform groundProbe;
     [SerializeField] private float raycastHeight = 3f;
     [SerializeField] private float raycastDistance = 8f;
@@ -32,12 +33,14 @@ public sealed class GroundFollower : MonoBehaviour
 
     private void Awake()
     {
+        ResolveGroundMask();
         ResolveGroundProbe();
         lastValidPosition = transform.position;
     }
 
     private void OnValidate()
     {
+        ResolveGroundMask();
         ResolveGroundProbe();
     }
 
@@ -136,7 +139,9 @@ public sealed class GroundFollower : MonoBehaviour
         for (int i = 0; i < hits.Length; i++)
         {
             RaycastHit hit = hits[i];
-            if (hit.collider == null || hit.collider.transform.IsChildOf(transform))
+            if (hit.collider == null
+                || hit.collider.transform.IsChildOf(transform)
+                || !CombatSpatialQuery.IsGroundLayer(hit.collider.gameObject.layer))
             {
                 continue;
             }
@@ -149,6 +154,14 @@ public sealed class GroundFollower : MonoBehaviour
         }
 
         return !float.IsPositiveInfinity(closestDistance);
+    }
+
+    private void ResolveGroundMask()
+    {
+        if (forceGroundLayerMask)
+        {
+            groundMask = CombatSpatialQuery.GroundMask;
+        }
     }
 
     private Vector3 GetProbePosition()

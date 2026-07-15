@@ -34,6 +34,11 @@ public static class CombatTargetFinder
                 continue;
             }
 
+            if (CombatSpatialQuery.HasWallBetween(self.transform.position, candidate.transform.position, 0.9f, self.transform, candidate.transform))
+            {
+                continue;
+            }
+
             nearest = candidate;
             nearestDistanceSqr = distanceSqr;
         }
