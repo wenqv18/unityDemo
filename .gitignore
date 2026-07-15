@@ -1,12 +1,23 @@
-﻿# Unity / Tuanjie generated folders
+# Unity / Tuanjie generated folders
 [Ll]ibrary/
 [Tt]emp/
 [Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 [Mm]emoryCaptures/
+
+# Local player builds and release packages
+[Bb]uild/
+[Bb]uilds/
+[Rr]eleases/
+*.apk
+*.aab
+*.ipa
+*.app
+*.exe
+*.zip
+*.7z
+*.rar
 
 # IDE and generated project files
 .vs/
@@ -33,6 +44,7 @@ Desktop.ini
 # Tuanjie built-in AI / local bridge state
 .codely-cli/
 .com-unity-codely.json
+.codelyignore
 
 # Local backups and captures
 Packages/manifest.json.codex-backup
@@ -49,4 +61,3 @@ sysinfo.txt
 [Aa]ssets/AssetStoreTools*
 [Aa]ssets/StreamingAssets/aa.meta
 [Aa]ssets/StreamingAssets/aa/*
-

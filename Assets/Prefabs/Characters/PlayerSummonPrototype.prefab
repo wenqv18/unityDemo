@@ -413,6 +413,7 @@ MonoBehaviour:
   groundMask:
     serializedVersion: 2
     m_Bits: 8
+  forceGroundLayerMask: 1
   groundProbe: {fileID: 7487906091801729177}
   raycastHeight: 3
   raycastDistance: 8
@@ -494,7 +495,8 @@ MonoBehaviour:
   runtimeStats: {fileID: 0}
   followTarget: {fileID: 0}
   fallbackMoveSpeedMetersPerSecond: 2
-  minimumPlayerDistance: 2.3
+  minimumPlayerDistance: 1.2
+  playerPathClearancePadding: 0.5
   patrolMinDistance: 3
   patrolMaxDistance: 8
   idlePatrolSpeedMultiplier: 0.2
@@ -505,6 +507,7 @@ MonoBehaviour:
   returnCompleteDistance: 4.5
   returnMoveSpeedStatBonus: 2
   initialSpawnMoveLockDuration: 1
+  commandPatrolSpeedMultiplier: 0.45
 --- !u!114 &261368069400059943
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -522,6 +525,7 @@ MonoBehaviour:
   attackBehaviour: {fileID: 0}
   actionController: {fileID: 0}
   followController: {fileID: 0}
+  navigationMover: {fileID: 0}
   targetFactions: 02000000
   detectionRange: 10
   targetRefreshInterval: 0.25

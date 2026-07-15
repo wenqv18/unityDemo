@@ -8,10 +8,14 @@ public static class CombatSpatialQuery
 {
     private const string GroundLayerName = "Ground";
     private const string WallLayerName = "Wall";
+    private const string PlayerLayerName = "Player";
     private const float DefaultWallCheckHeight = 0.9f;
+    private const float MovementTargetIgnoreDistance = 0.75f;
 
     public static int GroundMask => GetLayerMask(GroundLayerName, ~0);
     public static int WallMask => GetLayerMask(WallLayerName, 0);
+    public static int PlayerMask => GetLayerMask(PlayerLayerName, 0);
+    public static int MovementObstacleMask => WallMask | PlayerMask;
 
     public static bool IsGroundLayer(int layer)
     {
@@ -23,6 +27,12 @@ public static class CombatSpatialQuery
     {
         int wallLayer = LayerMask.NameToLayer(WallLayerName);
         return wallLayer >= 0 && layer == wallLayer;
+    }
+
+    public static bool IsPlayerLayer(int layer)
+    {
+        int playerLayer = LayerMask.NameToLayer(PlayerLayerName);
+        return playerLayer >= 0 && layer == playerLayer;
     }
 
     public static bool TryFindGroundPoint(Vector3 candidate, float raycastHeight, float raycastDistance, out Vector3 groundPoint)
@@ -60,8 +70,34 @@ public static class CombatSpatialQuery
 
     public static bool HasWallBetween(Vector3 from, Vector3 to, float height, Transform ignoredFrom, Transform ignoredTo)
     {
-        int wallMask = WallMask;
-        if (wallMask == 0)
+        return HasObstacleBetween(from, to, height, ignoredFrom, ignoredTo, WallMask, false);
+    }
+
+    public static bool HasMovementObstacleBetween(Vector3 from, Vector3 to, float height, Transform ignoredFrom, Transform ignoredTo)
+    {
+        return HasMovementObstacleBetween(from, to, height, 0f, ignoredFrom, ignoredTo);
+    }
+
+    public static bool HasMovementObstacleBetween(Vector3 from, Vector3 to, float height, float clearanceRadius, Transform ignoredFrom, Transform ignoredTo)
+    {
+        if (clearanceRadius <= 0f)
+        {
+            return HasObstacleBetween(from, to, height, ignoredFrom, ignoredTo, MovementObstacleMask, true);
+        }
+
+        return HasObstacleVolumeBetween(from, to, height, clearanceRadius, ignoredFrom, ignoredTo, MovementObstacleMask, true);
+    }
+
+    private static bool HasObstacleBetween(
+        Vector3 from,
+        Vector3 to,
+        float height,
+        Transform ignoredFrom,
+        Transform ignoredTo,
+        int layerMask,
+        bool ignorePlayerAtDestination)
+    {
+        if (layerMask == 0)
         {
             return false;
         }
@@ -75,7 +111,7 @@ public static class CombatSpatialQuery
             return false;
         }
 
-        RaycastHit[] hits = Physics.RaycastAll(origin, direction.normalized, distance, wallMask, QueryTriggerInteraction.Ignore);
+        RaycastHit[] hits = Physics.RaycastAll(origin, direction.normalized, distance, layerMask, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < hits.Length; i++)
         {
             Collider hitCollider = hits[i].collider;
@@ -86,10 +122,113 @@ public static class CombatSpatialQuery
                 continue;
             }
 
-            if (IsWallLayer(hitCollider.gameObject.layer))
+            int hitLayer = hitCollider.gameObject.layer;
+            if (IsWallLayer(hitLayer))
             {
                 return true;
             }
+
+            if (IsPlayerLayer(hitLayer))
+            {
+                if (ignorePlayerAtDestination && Vector3.Distance(hits[i].point, destination) <= MovementTargetIgnoreDistance)
+                {
+                    continue;
+                }
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool HasObstacleVolumeBetween(
+        Vector3 from,
+        Vector3 to,
+        float height,
+        float clearanceRadius,
+        Transform ignoredFrom,
+        Transform ignoredTo,
+        int layerMask,
+        bool ignorePlayerAtDestination)
+    {
+        if (layerMask == 0)
+        {
+            return false;
+        }
+
+        Vector3 origin = new Vector3(from.x, from.y + height, from.z);
+        Vector3 destination = new Vector3(to.x, to.y + height, to.z);
+        Vector3 direction = destination - origin;
+        float distance = direction.magnitude;
+        if (distance <= 0.0001f)
+        {
+            return HasBlockingOverlap(origin, clearanceRadius, ignoredFrom, ignoredTo, ignorePlayerAtDestination, destination, layerMask);
+        }
+
+        float safeRadius = Mathf.Max(0.01f, clearanceRadius);
+        if (HasBlockingOverlap(origin, safeRadius, ignoredFrom, ignoredTo, ignorePlayerAtDestination, destination, layerMask))
+        {
+            return true;
+        }
+
+        RaycastHit[] hits = Physics.SphereCastAll(origin, safeRadius, direction.normalized, distance, layerMask, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < hits.Length; i++)
+        {
+            if (IsBlockingMovementHit(hits[i].collider, hits[i].point, ignoredFrom, ignoredTo, ignorePlayerAtDestination, destination))
+            {
+                return true;
+            }
+        }
+
+        return HasBlockingOverlap(destination, safeRadius, ignoredFrom, ignoredTo, ignorePlayerAtDestination, destination, layerMask);
+    }
+
+    private static bool HasBlockingOverlap(
+        Vector3 center,
+        float radius,
+        Transform ignoredFrom,
+        Transform ignoredTo,
+        bool ignorePlayerAtDestination,
+        Vector3 destination,
+        int layerMask)
+    {
+        Collider[] overlaps = Physics.OverlapSphere(center, radius, layerMask, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < overlaps.Length; i++)
+        {
+            if (IsBlockingMovementHit(overlaps[i], center, ignoredFrom, ignoredTo, ignorePlayerAtDestination, destination))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsBlockingMovementHit(
+        Collider hitCollider,
+        Vector3 hitPoint,
+        Transform ignoredFrom,
+        Transform ignoredTo,
+        bool ignorePlayerAtDestination,
+        Vector3 destination)
+    {
+        if (hitCollider == null
+            || (ignoredFrom != null && hitCollider.transform.IsChildOf(ignoredFrom))
+            || (ignoredTo != null && hitCollider.transform.IsChildOf(ignoredTo)))
+        {
+            return false;
+        }
+
+        int hitLayer = hitCollider.gameObject.layer;
+        if (IsWallLayer(hitLayer))
+        {
+            return true;
+        }
+
+        if (IsPlayerLayer(hitLayer))
+        {
+            return !ignorePlayerAtDestination || Vector3.Distance(hitPoint, destination) > MovementTargetIgnoreDistance;
         }
 
         return false;

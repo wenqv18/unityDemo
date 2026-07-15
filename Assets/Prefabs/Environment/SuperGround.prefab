@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 7
   m_Component:
   - component: {fileID: 5023813202830262736}
-  m_Layer: 0
+  m_Layer: 3
   m_HasEditorInfo: 1
   m_Name: SuperGround
   m_TagString: Untagged

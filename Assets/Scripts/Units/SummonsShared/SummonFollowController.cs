@@ -12,6 +12,7 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
     [SerializeField] private Transform followTarget;
     [SerializeField] private float fallbackMoveSpeedMetersPerSecond = 2f;
     [SerializeField] private float minimumPlayerDistance = 2.3f;
+    [SerializeField] private float playerPathClearancePadding = 0.5f;
     [SerializeField] private float patrolMinDistance = 3f;
     [SerializeField] private float patrolMaxDistance = 8f;
     [SerializeField] private float idlePatrolSpeedMultiplier = 0.2f;
@@ -70,6 +71,7 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
         {
             navigationMover = gameObject.AddComponent<UnitNavigationMover>();
         }
+        ConfigurePlayerPathClearance();
 
         if (runtimeStats == null)
         {
@@ -340,11 +342,45 @@ public sealed class SummonFollowController : MonoBehaviour, ICharacterAnimationS
         if (navigationMover != null)
         {
             navigationMover.MoveTowards(targetPosition, speed);
+            EnforceMinimumPlayerDistance();
             return;
         }
 
         Vector3 nextPosition = Vector3.MoveTowards(currentPosition, target, speed * Time.deltaTime);
         transform.position = nextPosition;
+        EnforceMinimumPlayerDistance();
+    }
+
+    private void EnforceMinimumPlayerDistance()
+    {
+        ResolveFollowTargetIfNeeded();
+        if (followTarget == null)
+        {
+            return;
+        }
+
+        Vector3 flatFromPlayer = transform.position - followTarget.position;
+        flatFromPlayer.y = 0f;
+        float minimumDistance = Mathf.Max(0f, minimumPlayerDistance);
+        float distanceSqr = flatFromPlayer.sqrMagnitude;
+        if (minimumDistance <= 0f || distanceSqr >= minimumDistance * minimumDistance)
+        {
+            return;
+        }
+
+        Vector3 safeDirection = GetSafeDirectionAwayFromPlayer(flatFromPlayer);
+        Vector3 correctedPosition = followTarget.position + safeDirection * minimumDistance;
+        transform.position = new Vector3(correctedPosition.x, transform.position.y, correctedPosition.z);
+    }
+
+    private void ConfigurePlayerPathClearance()
+    {
+        if (navigationMover == null)
+        {
+            return;
+        }
+
+        navigationMover.SetMovementClearanceRadius(minimumPlayerDistance + Mathf.Max(0f, playerPathClearancePadding));
     }
 
     private void FaceFlatDirection(Vector3 direction)

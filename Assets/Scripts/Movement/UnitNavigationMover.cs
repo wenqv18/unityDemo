@@ -14,6 +14,9 @@ public sealed class UnitNavigationMover : MonoBehaviour
     [SerializeField] private int maxExpandedNodes = 700;
     [SerializeField] private float cornerReachDistance = 0.25f;
     [SerializeField] private float lineOfSightHeight = 0.9f;
+    [SerializeField] private float movementClearanceRadius = 0.75f;
+    [SerializeField] private float pathCommitDuration = 0.6f;
+    [SerializeField] private float clearLineResumeDelay = 0.25f;
 
     private readonly List<Vector3> currentPath = new List<Vector3>();
     private readonly List<GridKey> openList = new List<GridKey>();
@@ -22,6 +25,8 @@ public sealed class UnitNavigationMover : MonoBehaviour
 
     private Vector3 lastTargetPosition;
     private float nextRepathTime;
+    private float committedPathUntilTime;
+    private float clearLineSinceTime = -1f;
     private int pathIndex;
 
     public bool MoveTowards(Vector3 targetPosition, float speed, float stoppingDistance = 0f)
@@ -39,7 +44,10 @@ public sealed class UnitNavigationMover : MonoBehaviour
             return true;
         }
 
-        if (HasClearLineTo(targetPosition))
+        bool hasPath = currentPath.Count > 0 && pathIndex < currentPath.Count;
+        bool committedToPath = hasPath && Time.time < committedPathUntilTime;
+        bool clearLineReady = HasStableClearLineTo(targetPosition);
+        if (!committedToPath && clearLineReady)
         {
             ClearPath();
             MoveDirectly(targetPosition, speed);
@@ -57,6 +65,11 @@ public sealed class UnitNavigationMover : MonoBehaviour
     public void Stop()
     {
         ClearPath();
+    }
+
+    public void SetMovementClearanceRadius(float radius)
+    {
+        movementClearanceRadius = Mathf.Max(0f, radius);
     }
 
     public bool HasClearLineTo(Transform target)
@@ -161,6 +174,29 @@ public sealed class UnitNavigationMover : MonoBehaviour
         }
     }
 
+    private bool HasStableClearLineTo(Vector3 targetPosition)
+    {
+        if (!HasClearLineTo(targetPosition))
+        {
+            clearLineSinceTime = -1f;
+            return false;
+        }
+
+        if (currentPath.Count == 0 || pathIndex >= currentPath.Count)
+        {
+            clearLineSinceTime = Time.time;
+            return true;
+        }
+
+        if (clearLineSinceTime < 0f)
+        {
+            clearLineSinceTime = Time.time;
+            return false;
+        }
+
+        return Time.time - clearLineSinceTime >= clearLineResumeDelay;
+    }
+
     private bool MoveAlongPath(float speed)
     {
         if (currentPath.Count == 0 || pathIndex >= currentPath.Count)
@@ -215,6 +251,8 @@ public sealed class UnitNavigationMover : MonoBehaviour
 
         currentPath.Add(finalPoint);
         pathIndex = 0;
+        clearLineSinceTime = -1f;
+        committedPathUntilTime = Time.time + Mathf.Max(0f, pathCommitDuration);
     }
 
     private GridKey PopBestOpenNode()
@@ -238,7 +276,7 @@ public sealed class UnitNavigationMover : MonoBehaviour
 
     private bool IsBlockedSegment(Vector3 from, Vector3 to, Transform ignoredTarget = null)
     {
-        return CombatSpatialQuery.HasWallBetween(from, to, lineOfSightHeight, transform, ignoredTarget);
+        return CombatSpatialQuery.HasMovementObstacleBetween(from, to, lineOfSightHeight, movementClearanceRadius, transform, ignoredTarget);
     }
 
     private bool IsOutsideSearchRadius(GridKey key)
@@ -292,6 +330,7 @@ public sealed class UnitNavigationMover : MonoBehaviour
     {
         currentPath.Clear();
         pathIndex = 0;
+        committedPathUntilTime = 0f;
     }
 
     private struct GridKey : IEquatable<GridKey>
